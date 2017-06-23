@@ -1,0 +1,101 @@
+-- Gastón Fernández
+-- 140356-4
+-- gastonfernandez@live.com
+
+/************** 
+*Ejercicio 1  * 
+***************/
+
+select	empl_codigo as Codigo_Empleado,
+		ltrim(rtrim(empl_nombre))+' '+ltrim(rtrim(empl_apellido)) as Nombre_y_Apellido,
+		cast(year(f.fact_fecha) as varchar)+  right ('00'+cast(month(f.fact_fecha)as varchar),2) as Periodo,
+		(COUNT(distinct fact_tipo+fact_sucursal+fact_numero) * 100.00 ) /
+				(
+					select	top 1 COUNT( *)
+					from	Factura f
+					where	f.fact_vendedor=e.empl_codigo
+					group by cast(year(f.fact_fecha) as varchar)+  right ('00'+cast(month(f.fact_fecha)as varchar),2),
+							fact_vendedor
+					order by  1 desc
+				)  as Indice_Productividad,
+			(
+			select	top 1 cast(year(f.fact_fecha) as varchar)+  right ('00'+cast(month(f.fact_fecha)as varchar),2)
+			from	Factura f
+			where	f.fact_vendedor=e.empl_codigo
+			group by cast(year(f.fact_fecha) as varchar)+  right ('00'+cast(month(f.fact_fecha)as varchar),2),
+					fact_vendedor
+			order by  COUNT(*) desc
+			)  as Periodo_de_Referencia
+from	Empleado e
+		join Factura f on f.fact_vendedor=e.empl_codigo		
+where	empl_codigo not in (
+							select isnull(empl_jefe,0)
+							from	Empleado
+							)
+group by empl_codigo,
+		ltrim(rtrim(empl_nombre))+' '+ltrim(rtrim(empl_apellido)) ,
+		cast(year(f.fact_fecha) as varchar)+  right ('00'+cast(month(f.fact_fecha)as varchar),2),
+		e.empl_nacimiento
+order by e.empl_nacimiento asc,
+		cast(year(f.fact_fecha) as varchar)+  right ('00'+cast(month(f.fact_fecha)as varchar),2) asc
+		
+
+/**************
+* Ejercicio 2 *
+***************/
+
+
+
+
+CREATE  TRIGGER FacturasporCliente
+ON factura
+AFTER INSERT, UPDATE
+AS
+ BEGIN
+
+
+	Declare @cliente char(6)
+	declare @vendedor numeric(6,0)
+	declare @periodo char(6)
+
+
+	DECLARE Facturas CURSOR FOR 
+	select	isnull(fact_cliente,0),
+			isnull(fact_vendedor,0),
+			isnull(cast(year(fact_fecha) as varchar)+  right ('00'+cast(month(fact_fecha)as varchar),2),1)
+	from inserted
+
+	OPEN Facturas
+
+	FETCH NEXT FROM Facturas 
+	INTO @cliente, @vendedor,@periodo
+
+	WHILE @@FETCH_STATUS = 0
+	BEGIN
+	
+		if (
+			(
+			select isnull(COUNT(distinct fact_vendedor),0)
+			from	Factura
+			where	fact_cliente=@cliente
+					and cast(year(fact_fecha) as varchar)+  right ('00'+cast(month(fact_fecha)as varchar),2)
+						=@periodo
+			)	>2)
+			BEGIN
+			
+			
+					rollback
+					CLOSE Facturas;
+					DEALLOCATE Facturas;
+					RAISERROR ('No es Posible vender con mas de 2 vendedores por periodo', 16, 1);
+					return
+				
+			END
+		
+	FETCH NEXT FROM Facturas 
+	INTO @cliente, @vendedor,@periodo
+	END
+	CLOSE Facturas;
+	DEALLOCATE Facturas;
+ END
+ 
