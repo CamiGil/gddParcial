@@ -90,37 +90,6 @@ INSERT INTO Facturacion_Mes(mes , anio , cantFactEmitidas , total , cliente)
 	FROM Factura f
 END
 
--- El que hice yo que esta mal muy mal --
-SELECT c.clie_razon_social,
-	CASE WHEN (SELECT ISNULL(COUNT(*),0) FROM Factura f2	
-					WHERE YEAR(f2.fact_fecha) = 2012 AND f2.fact_cliente = c.clie_codigo  ) > 1 
-				THEN 'Cliente recurrente'
-		WHEN (SELECT ISNULL(COUNT(*),0) FROM Factura f2	
-					WHERE YEAR(f2.fact_fecha) = 2012 AND f2.fact_cliente = c.clie_codigo) = 1
-				THEN 'Unica vez'
-	END AS 'leyenda',
-	(SELECT ISNULL(COUNT(distinct itf3.item_producto),0) FROM Factura f3
-		INNER JOIN Item_Factura itf3 ON itf3.item_numero = f3.fact_numero and itf3.item_tipo = f3.fact_tipo and itf3.item_sucursal = f3.fact_sucursal
-		WHERE YEAR(f3.fact_fecha) = 2012 AND f3.fact_cliente = c.clie_codigo
-		GROUP BY YEAR(f3.fact_fecha))
-		as 'cantProdVendidos',
-	(SELECT TOP 1 p4.prod_codigo FROM Factura f4
-		INNER JOIN Item_Factura i4 ON i4.item_numero = f4.fact_numero AND i4.item_tipo = f4.fact_tipo AND i4.item_sucursal = f4.fact_sucursal
-		INNER JOIN Producto p4 ON p4.prod_codigo = i4.item_producto
-		WHERE YEAR(f4.fact_fecha) = 2012 AND f4.fact_cliente = c.clie_codigo
-		GROUP BY p4.prod_codigo
-		ORDER BY SUM(f4.fact_total) DESC ) as 'prod con comp mas vendido'
-	FROM Factura f
-	INNER JOIN Cliente c ON c.clie_codigo = f.fact_cliente
-	GROUP BY c.clie_codigo, c.clie_razon_social
-	HAVING (SELECT SUM(f5.fact_total) FROM Factura f5 
-				WHERE YEAR(f5.fact_fecha) = 2012 
-					AND f5.fact_cliente = c.clie_codigo) < 
-			(0.25 * (SELECT SUM(f6.fact_total + f7.fact_total) / (COUNT(f6.fact_numero + f7.fact_numero))
-				FROM Factura f6
-				INNER JOIN Factura f7 ON f6.fact_numero = f7.fact_numero AND f6.fact_tipo = f7.fact_tipo AND f6.fact_sucursal = f7.fact_sucursal
-				WHERE YEAR(f6.fact_fecha) = 2010 AND YEAR(f7.fact_fecha) = 2011))
-
 
 -- Con el trigger mantengo actualizada la tabla --
 CREATE TRIGGER T_Facturacion ON Factura
