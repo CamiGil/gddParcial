@@ -1,10 +1,10 @@
---1
+--1--
 select clie_codigo, clie_razon_social 
 from Cliente
 where clie_limite_credito >=1000
 order by clie_codigo
 
---2
+--2--
 select p.prod_codigo, p.prod_detalle
 from Producto p 
 join Item_Factura i on i.item_producto = p.prod_codigo
@@ -15,14 +15,14 @@ where year(f.fact_fecha) = 2012
 group by p.prod_codigo, p.prod_detalle
 order by sum(i.item_cantidad)
 
---3
+--3--
 select p.prod_codigo, p.prod_detalle, isnull(sum(stoc_cantidad),0) Cant
 from producto p 
 left join stock s on s.stoc_producto = p.prod_codigo
 group by p.prod_codigo,p.prod_detalle 
 order by p.prod_detalle 
 
---4
+--4--
 select p.prod_codigo, p.prod_detalle,
 isnull(sum(c.comp_cantidad),0) cantComponente
 from producto p
@@ -47,7 +47,7 @@ join Stock s on s.stoc_producto = p.prod_codigo
 group by p.prod_codigo, p.prod_detalle
 having avg(isnull(stoc_cantidad,0)) > 100
 
---5 
+--5--
 select p.prod_codigo, p.prod_detalle,
 sum(case when year(f.fact_fecha) = 2012 then i.item_cantidad else 0 end )
 from producto p
@@ -176,3 +176,14 @@ WHERE EXISTS(SELECT 1
 			WHERE YEAR(F2.fact_fecha) = 2012)
 GROUP BY P.prod_detallE
 ORDER BY SUM(ITF.item_cantidad*ITF.item_precio) DESC
+
+--13--
+
+SELECT P.prod_detalle, P.prod_precio, SUM(C.comp_cantidad) AS 'CANT COMP',
+	SUM(C.comp_cantidad*P2.prod_precio) AS '$ COMP'
+FROM PRODUCTO P
+	JOIN COMPOSICION C ON C.comp_producto = P.prod_codigo 
+	JOIN PRODUCTO P2 ON C.comp_componente = P2.prod_codigo
+GROUP BY P.prod_detalle, P.prod_precio
+HAVING SUM(C.comp_cantidad) > 2
+ORDER BY SUM(C.comp_cantidad) DESC
