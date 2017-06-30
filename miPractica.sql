@@ -1,3 +1,64 @@
+--1
+select clie_codigo, clie_razon_social 
+from Cliente
+where clie_limite_credito >=1000
+order by clie_codigo
+
+--2
+select p.prod_codigo, p.prod_detalle
+from Producto p 
+join Item_Factura i on i.item_producto = p.prod_codigo
+join Factura f on f.fact_numero = i.item_numero 
+and f.fact_sucursal = i.item_sucursal
+and f.fact_tipo = i.item_tipo 
+where year(f.fact_fecha) = 2012
+group by p.prod_codigo, p.prod_detalle
+order by sum(i.item_cantidad)
+
+--3
+select p.prod_codigo, p.prod_detalle, isnull(sum(stoc_cantidad),0) Cant
+from producto p 
+left join stock s on s.stoc_producto = p.prod_codigo
+group by p.prod_codigo,p.prod_detalle 
+order by p.prod_detalle 
+
+--4
+select p.prod_codigo, p.prod_detalle,
+isnull(sum(c.comp_cantidad),0) cantComponente
+from producto p
+left join Composicion c on p.prod_codigo = c.comp_producto
+group by p.prod_codigo, p.prod_detalle
+having exists(
+select 1 
+from Stock 
+where stoc_producto = prod_codigo
+group by stoc_producto
+having avg(stoc_cantidad) > 100
+)
+
+select p.prod_codigo, p.prod_detalle,
+isnull(
+(select sum(c.comp_cantidad) cantComponente
+from composicion c
+where c.comp_producto = p.prod_codigo)
+,0) as stock
+from producto p
+join Stock s on s.stoc_producto = p.prod_codigo
+group by p.prod_codigo, p.prod_detalle
+having avg(isnull(stoc_cantidad,0)) > 100
+
+--5 
+select p.prod_codigo, p.prod_detalle,
+sum(case when year(f.fact_fecha) = 2012 then i.item_cantidad else 0 end )
+from producto p
+join Item_Factura i on i.item_producto = p.prod_codigo
+join Factura f on f.fact_numero = i.item_numero 
+and f.fact_sucursal = i.item_sucursal
+and f.fact_tipo = i.item_tipo
+group by p.prod_codigo, p.prod_detalle
+having sum(case when year(f.fact_fecha)=2012 then sum(i.item_cantidad) end) 
+> sum(case when year(f.fact_fecha)=2011 then sum(i.item_cantidad) end)
+
 --6--
 SELECT R.rubr_detalle, R.rubr_id,
 	(COUNT(P.prod_codigo)) AS 'CANT PRODUCTOS',
